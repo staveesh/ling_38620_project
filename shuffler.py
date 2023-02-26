@@ -66,10 +66,93 @@ def shuffle_type_1(sentence):
     return res
 
 def shuffle_type_2(sentence):
-    pass 
+    """
+    Shuffles each bigram in a sentence. Retains the positions of question marks and full stops.
+    """
+    orig, pos = tokenize(sentence)
+    words = np.delete(orig, pos)
+    if len(words) == 1 and len(pos) <= 1:
+        return sentence
+    bigram_pairs = []
+    for i in range(0, len(words), 2):
+        if i == len(words)-1:
+            bigram_pairs.append((words[i], ''))
+        else:
+            bigram_pairs.append((words[i], words[i+1]))
+
+    word_indexes = list(range(len(bigram_pairs)))
+    shuffled = list(range(len(bigram_pairs)))
+
+    if len(shuffled) == 1:
+        return sentence
+
+    while True:
+        np.random.shuffle(shuffled)
+        done = True
+        for i in range(len(word_indexes)):
+            if shuffled[i] == word_indexes[i]:
+                done = False
+                break
+        if done:
+            break
+    # Assemble into a new sentence
+    i = 0
+    j = 0
+    ret_idx = 0
+    res = ''
+    while i < len(shuffled):
+        res += bigram_pairs[shuffled[i]][0]
+        j += 1 
+        if ret_idx < len(pos) and pos[ret_idx] == j:
+            res += orig[pos[ret_idx]]
+            ret_idx += 1
+        j += 1
+        res += ' '
+        res += bigram_pairs[shuffled[i]][1]
+        res += ' '
+        j += 1
+        i += 1
+    return res
+
 
 def shuffle_type_3(sentence):
-    pass
+    """
+    Swaps words in each bigram in a sentence. No changes in positions of bigrams. Retains the positions of question marks and full stops.
+    """
+    orig, pos = tokenize(sentence)
+    words = np.delete(orig, pos)
+    if len(words) == 1 and len(pos) <= 1:
+        return sentence
+    bigram_pairs = []
+    for i in range(0, len(words), 2):
+        if i == len(words)-1:
+            bigram_pairs.append(('', words[i]))
+        else:
+            bigram_pairs.append((words[i+1], words[i]))
+
+    shuffled = list(range(len(bigram_pairs)))
+
+    if len(shuffled) == 1:
+        return sentence
+
+    # Assemble into a new sentence
+    i = 0
+    j = 0
+    ret_idx = 0
+    res = ''
+    while i < len(shuffled):
+        res += bigram_pairs[shuffled[i]][0]
+        j += 1 
+        if ret_idx < len(pos) and pos[ret_idx] == j:
+            res += orig[pos[ret_idx]]
+            ret_idx += 1
+        j += 1
+        res += ' '
+        res += bigram_pairs[shuffled[i]][1]
+        res += ' '
+        j += 1
+        i += 1
+    return res
 
 def jsonreader(f):
     res = []
@@ -86,9 +169,9 @@ def process_input(shuffle_type, modify_sentence_1, modify_sentence_2):
 
     if shuffle_type == 1:
         shuffler_fn = shuffle_type_1
-    elif type == 2:
+    elif shuffle_type == 2:
         shuffler_fn = shuffle_type_2 
-    elif type == 3:
+    elif shuffle_type == 3:
         shuffler_fn = shuffle_type_3 
     
     if modify_sentence_1 and not modify_sentence_2:
@@ -126,6 +209,8 @@ def process_input(shuffle_type, modify_sentence_1, modify_sentence_2):
                         df.at[idx, 'sentence1'] = shuffler_fn(row['sentence1'])
                     elif sen2 and modify_sentence_2:
                         df.at[idx, 'sentence2'] = shuffler_fn(row['sentence2'])
+                new_file = inp_file[:-4]+'_type_'+str(shuffle_type)+ mod_str +'.csv'
+                df.to_csv(f'{output_path}/{fol}/{new_file}', sep='\t')
                 new_file = inp_file[:-4]+'_type_'+str(shuffle_type)+ mod_str +'.json'
                 with open(f'{output_path}/{fol}/{new_file}', 'w') as fd:
                     fd.write(df.to_json(orient='records', lines=True))
@@ -133,3 +218,7 @@ def process_input(shuffle_type, modify_sentence_1, modify_sentence_2):
 if __name__ == "__main__":
     process_input(1, True, False)
     process_input(1, False, True)
+    process_input(2, True, False)
+    process_input(2, False, True)
+    process_input(3, True, False)
+    process_input(3, False, True)
